@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Straker">
+<title>Straker</title>
+<style>
+:root {
+  --bg:#f7f7f5;--surface:#ffffff;--surface2:#f0efeb;
+  --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.18);
+  --text:#1a1a18;--text2:#6b6b67;--text3:#9b9b96;
+  --teal:#0f6e56;--teal-l:#e1f5ee;--teal-d:#085041;
+  --coral:#993c1d;--coral-l:#faece7;
+  --blue:#185fa5;--blue-l:#e6f1fb;
+  --amber:#854f0b;--amber-l:#faeeda;
+  --red:#a32d2d;--red-l:#fcebeb;
+  --mono:'Courier New',monospace;
+  --rsm:8px;--rmd:12px;--rlg:16px;
+  --tabh:64px;--hdrh:54px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#141412;--surface:#1e1e1c;--surface2:#282826;
+  --border:rgba(255,255,255,0.09);--border2:rgba(255,255,255,0.18);
+  --text:#f0f0ec;--text2:#9b9b96;--text3:#6b6b67;
+  --teal:#1d9e75;--teal-l:#0a2e22;--teal-d:#5dcaa5;
+  --coral:#f0997b;--coral-l:#2e1008;
+  --blue:#85b7eb;--blue-l:#071d35;
+  --amber:#ef9f27;--amber-l:#2a1a04;
+  --red:#f09595;--red-l:#200a0a;
+}}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;font-size:15px}
+#app{display:flex;flex-direction:column;height:100vh;max-width:480px;margin:0 auto;position:relative}
+
+/* HEADER */
+.hdr{height:var(--hdrh);background:var(--surface);border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0}
+.brand{font-size:20px;font-weight:700;letter-spacing:-0.04em}
+.brand-sub{font-size:11px;color:var(--text3);margin-left:6px;font-weight:400}
+.live-pill{display:flex;align-items:center;gap:5px;background:var(--teal-l);color:var(--teal-d);font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;cursor:pointer}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:pulse 2s infinite}
+.live-pill.offline{background:var(--surface2);color:var(--text3)}
+.live-pill.offline .live-dot{background:var(--text3);animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* SCROLL */
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 14px;background:var(--bg)}
+.section{display:none}.section.active{display:block}
+
+/* TABS */
+.tabs{height:var(--tabh);background:var(--surface);border-top:0.5px solid var(--border);display:flex;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:none;cursor:pointer;color:var(--text3);font-size:10px;font-weight:500;padding:6px 0}
+.tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tab.active{color:var(--teal)}
+
+/* CARDS */
+.card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--rlg);padding:14px;margin-bottom:10px}
+.card-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:11px}
+
+/* METRICS */
+.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.metric{background:var(--surface2);border-radius:var(--rsm);padding:12px}
+.mlabel{font-size:11px;color:var(--text2);margin-bottom:4px}
+.mvalue{font-size:17px;font-weight:700;font-family:var(--mono);letter-spacing:-0.02em}
+
+/* ROWS */
+.row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:0.5px solid var(--border)}
+.row:last-child{border-bottom:none}
+.rl{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.rr{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;margin-left:10px}
+.rticker{font-size:14px;font-weight:700}
+.rname{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+.rval{font-size:14px;font-weight:700;font-family:var(--mono)}
+.rsub{font-size:11px;color:var(--text2);font-family:var(--mono)}
+
+/* COLORS */
+.gain{color:var(--teal)}.loss{color:var(--coral)}.neutral{color:var(--text)}.muted{color:var(--text2)}
+
+/* BADGES */
+.badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;display:inline-block}
+.b-open{background:var(--teal-l);color:var(--teal-d)}
+.b-closed{background:var(--surface2);color:var(--text2)}
+.b-hk{background:var(--amber-l);color:var(--amber)}
+.b-buy{background:var(--teal-l);color:var(--teal-d)}
+.b-sell{background:var(--coral-l);color:var(--coral)}
+
+/* DETAIL */
+.detail{display:none;margin-top:8px;background:var(--surface2);border-radius:var(--rsm);padding:10px}
+.detail.open{display:block}
+.dtbl{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
+.dtbl th{color:var(--text3);font-weight:600;text-align:left;padding:3px 0;font-size:10px;text-transform:uppercase;letter-spacing:0.04em}
+.dtbl th:last-child{text-align:right}
+.dtbl td{padding:5px 0;color:var(--text2);font-family:var(--mono);border-top:0.5px solid var(--border)}
+.dtbl td:first-child{font-family:-apple-system,sans-serif;font-weight:600;color:var(--text)}
+.dtbl td:last-child{text-align:right}
+.dtbl .buy-r td{color:var(--teal)}.dtbl .buy-r td:first-child{color:var(--teal)}
+.dtbl .sell-r td{color:var(--coral)}.dtbl .sell-r td:first-child{color:var(--coral)}
+.edit-trade-btn{font-size:10px;color:var(--blue);background:none;border:none;cursor:pointer;padding:0;font-family:-apple-system,sans-serif;font-weight:600}
+
+/* SECTION LABEL */
+.slabel{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin:16px 0 7px 2px}
+.slabel:first-child{margin-top:0}
+
+/* FUND ROW */
+.fund-row{display:flex;justify-content:space-between;align-items:flex-start;padding:9px 0;border-bottom:0.5px solid var(--border)}
+.fund-row:last-child{border-bottom:none}
+.fdesc{font-size:13px;font-weight:500}
+.fnote{font-size:11px;color:var(--text2);margin-top:2px}
+.famt{font-size:13px;font-weight:700;font-family:var(--mono);color:var(--blue);margin-left:10px;white-space:nowrap}
+
+/* TX ROW */
+.tx-row{display:flex;justify-content:space-between;align-items:flex-start;padding:9px 0;border-bottom:0.5px solid var(--border)}
+.tx-row:last-child{border-bottom:none}
+.tx-l{display:flex;flex-direction:column;gap:3px;flex:1}
+.tx-meta{font-size:11px;color:var(--text2);font-family:var(--mono)}
+
+/* SETTINGS */
+.sgroup{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--rlg);margin-bottom:14px;overflow:hidden}
+.sgroup-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;padding:12px 14px 6px}
+.srow{display:flex;justify-content:space-between;align-items:center;padding:13px 14px;border-top:0.5px solid var(--border);cursor:pointer}
+.srow:first-of-type{border-top:none}
+.srow:active{background:var(--surface2)}
+.srow-l{display:flex;flex-direction:column;gap:2px}
+.srow-title{font-size:14px;font-weight:500}
+.srow-desc{font-size:11px;color:var(--text2)}
+.srow-icon svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:var(--text3)}
+.danger{color:#e24b4a}
+
+/* FAB */
+.fab{position:fixed;bottom:calc(var(--tabh) + 14px + env(safe-area-inset-bottom));right:18px;width:52px;height:52px;border-radius:50%;background:var(--teal);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:50;box-shadow:0 2px 12px rgba(0,0,0,0.18)}
+.fab svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.fab:active{transform:scale(0.94)}
+
+/* SHEET (bottom sheet modal) */
+.sheet-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.48);z-index:200;align-items:flex-end;justify-content:center}
+.sheet-overlay.open{display:flex}
+.sheet{background:var(--surface);border-radius:var(--rlg) var(--rlg) 0 0;padding:20px 18px;width:100%;max-width:480px;padding-bottom:calc(22px + env(safe-area-inset-bottom));max-height:90vh;overflow-y:auto}
+.sheet h3{font-size:17px;font-weight:700;margin-bottom:16px}
+.sheet-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
+
+/* FORM */
+.field{margin-bottom:13px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.04em}
+.field input,.field select,.field textarea{width:100%;padding:11px 12px;border:0.5px solid var(--border2);border-radius:var(--rsm);background:var(--surface2);color:var(--text);font-size:15px;font-family:-apple-system,sans-serif;outline:none;-webkit-appearance:none}
+.field input:focus,.field select:focus{border-color:var(--teal)}
+.field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b6b67' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.field-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.seg{display:flex;background:var(--surface2);border-radius:var(--rsm);padding:3px;gap:3px;margin-bottom:13px}
+.seg-btn{flex:1;padding:8px;border:none;background:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;color:var(--text2);transition:all 0.15s}
+.seg-btn.active-buy{background:var(--teal);color:#fff}
+.seg-btn.active-sell{background:var(--coral);color:#fff}
+.form-actions{display:flex;gap:8px;margin-top:4px}
+.btn{flex:1;padding:13px;border-radius:var(--rsm);border:0.5px solid var(--border2);background:none;font-size:15px;font-weight:600;cursor:pointer;color:var(--text)}
+.btn:active{opacity:0.7}
+.btn-primary{background:var(--teal);color:#fff;border-color:transparent}
+.btn-danger{background:#e24b4a;color:#fff;border-color:transparent}
+.btn-red{background:var(--red-l);color:var(--red);border-color:transparent}
+
+/* CONFIRM */
+.confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.48);z-index:300;align-items:center;justify-content:center;padding:20px}
+.confirm-overlay.open{display:flex}
+.confirm-box{background:var(--surface);border-radius:var(--rlg);padding:22px 18px;width:100%;max-width:320px}
+.confirm-box h4{font-size:16px;font-weight:700;margin-bottom:8px}
+.confirm-box p{font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.5}
+.confirm-actions{display:flex;gap:8px}
+
+/* TOAST */
+.toast{position:fixed;bottom:calc(var(--tabh)+14px+env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(16px);background:#1a1a18;color:#fff;font-size:13px;font-weight:600;padding:10px 20px;border-radius:20px;opacity:0;transition:all 0.25s;z-index:400;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(prefers-color-scheme:dark){.toast{background:#e0e0dc;color:#1a1a18}}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty svg{width:40px;height:40px;stroke:var(--text3);fill:none;stroke-width:1.5;margin-bottom:12px;stroke-linecap:round;stroke-linejoin:round}
+.empty p{font-size:14px;line-height:1.6}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="hdr">
+    <div>
+      <span class="brand">Straker</span>
+      <span class="brand-sub">Portfolio</span>
+    </div>
+    <div class="live-pill offline" id="livePill" onclick="refreshQuotes()" title="Tap to refresh">
+      <div class="live-dot"></div>
+      <span id="liveLabel">Offline</span>
+    </div>
+  </div>
+
+  <div class="scroll" id="scrollArea">
+    <div class="section active" id="sec-overview"></div>
+    <div class="section" id="sec-positions"></div>
+    <div class="section" id="sec-trades"></div>
+    <div class="section" id="sec-funds"></div>
+    <div class="section" id="sec-settings"></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="nav('overview',this)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Overview
+    </button>
+    <button class="tab" onclick="nav('positions',this)">
+      <svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+      Positions
+    </button>
+    <button class="tab" onclick="nav('trades',this)">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Trades
+    </button>
+    <button class="tab" onclick="nav('funds',this)">
+      <svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+      Funds
+    </button>
+    <button class="tab" onclick="nav('settings',this)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06-.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </button>
+  </div>
+</div>
+
+<!-- FAB: only on positions & trades tabs -->
+<button class="fab" id="fab" onclick="openTradeSheet()" aria-label="Log trade" style="display:none">
+  <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
+
+<!-- TRADE SHEET -->
+<div class="sheet-overlay" id="tradeSheet">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3 id="tradeSheetTitle">Log trade</h3>
+    <div class="seg">
+      <button class="seg-btn active-buy" id="segBuy" onclick="setSide('BUY')">Buy</button>
+      <button class="seg-btn" id="segSell" onclick="setSide('SELL')">Sell</button>
+    </div>
+    <div class="field">
+      <label>Ticker</label>
+      <input id="fTicker" placeholder="e.g. SPY, AAPL, 1810.HK" autocapitalize="characters" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Name / description</label>
+      <input id="fName" placeholder="e.g. SPDR S&P 500 ETF">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Quantity</label>
+        <input id="fQty" type="number" placeholder="0" inputmode="decimal" step="any">
+      </div>
+      <div class="field">
+        <label>Price per share</label>
+        <input id="fPrice" type="number" placeholder="0.00" inputmode="decimal" step="any">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Commission</label>
+        <input id="fComm" type="number" placeholder="0.00" inputmode="decimal" step="any">
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input id="fDate" type="date">
+      </div>
+    </div>
+    <div class="field">
+      <label>Currency</label>
+      <select id="fCurrency">
+        <option value="USD">USD</option>
+        <option value="SGD">SGD</option>
+        <option value="HKD">HKD</option>
+        <option value="EUR">EUR</option>
+        <option value="GBP">GBP</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Notes (optional)</label>
+      <input id="fNote" placeholder="e.g. averaging down, partial exit">
+    </div>
+    <div id="tradeTotal" style="font-size:13px;color:var(--text2);margin-bottom:14px;font-family:var(--mono)"></div>
+    <div id="editDeleteBtn" style="display:none;margin-bottom:10px">
+      <button class="btn btn-red" onclick="deleteTrade()">Delete this trade</button>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeSheet('tradeSheet')">Cancel</button>
+      <button class="btn btn-primary" id="tradeSubmitBtn" onclick="submitTrade()">Log trade</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT SHEET -->
+<div class="sheet-overlay" id="exportSheet">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3>Export data</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.5">Copy the JSON below and paste it into Notes or email it to yourself. Use it to restore Straker on a new device.</p>
+    <textarea id="exportTA" readonly onclick="this.select()" style="width:100%;height:130px;font-size:11px;font-family:var(--mono);background:var(--surface2);border:0.5px solid var(--border2);border-radius:var(--rsm);padding:10px;color:var(--text);resize:none;outline:none"></textarea>
+    <div class="form-actions" style="margin-top:12px">
+      <button class="btn" onclick="closeSheet('exportSheet')">Done</button>
+      <button class="btn btn-primary" onclick="copyExport()" id="copyBtn">Copy all</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT SHEET -->
+<div class="sheet-overlay" id="importSheet">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3>Import data</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.5">Paste a previously exported Straker JSON. This overwrites all current data.</p>
+    <textarea id="importTA" placeholder="Paste Straker JSON here..." style="width:100%;height:130px;font-size:11px;font-family:var(--mono);background:var(--surface2);border:0.5px solid var(--border2);border-radius:var(--rsm);padding:10px;color:var(--text);resize:none;outline:none"></textarea>
+    <div class="form-actions" style="margin-top:12px">
+      <button class="btn" onclick="closeSheet('importSheet')">Cancel</button>
+      <button class="btn btn-primary" onclick="doImport()">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- API KEY SHEET -->
+<div class="sheet-overlay" id="apiSheet">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3>Live price API key</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:4px;line-height:1.5">Straker uses <strong>Alpha Vantage</strong> for live prices. It is free — get your key in 30 seconds:</p>
+    <ol style="font-size:13px;color:var(--text2);margin:0 0 14px 16px;line-height:2">
+      <li>Go to <strong>alphavantage.co/support</strong></li>
+      <li>Click <strong>"Get your free API key"</strong></li>
+      <li>Enter your email — no credit card needed</li>
+      <li>Copy the key and paste it below</li>
+    </ol>
+    <div class="field">
+      <label>Alpha Vantage API key</label>
+      <input id="fApiKey" placeholder="e.g. ABC123XYZ456" autocomplete="off" autocapitalize="none">
+    </div>
+    <p style="font-size:11px;color:var(--text3);margin-bottom:14px">Free tier: 25 requests/day, 5 per minute. Sufficient for daily use. Key is stored only on this device.</p>
+    <div class="form-actions">
+      <button class="btn" onclick="closeSheet('apiSheet')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveApiKey()">Save & fetch prices</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <h4 id="confirmTitle"></h4>
+    <p id="confirmMsg"></p>
+    <div class="confirm-actions">
+      <button class="btn" onclick="closeOverlay('confirmOverlay')">Cancel</button>
+      <button class="btn btn-danger" id="confirmOk">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── SEED DATA ───────────────────────────────────────────────────────────────
+const SEED = {
+  positions:[
+    {id:'p1',ticker:'SPY',name:'SPDR S&P 500 ETF',status:'closed',trades:[
+      {id:'t1',type:'BUY',qty:10,price:532.10,date:'2024-07-01',currency:'USD'},
+      {id:'t2',type:'BUY',qty:13,price:581.00,date:'2024-08-01',currency:'USD'},
+      {id:'t3',type:'BUY',qty:17,price:602.79,date:'2024-10-01',currency:'USD'},
+      {id:'t4',type:'BUY',qty:17,price:609.33,date:'2024-11-01',currency:'USD'},
+      {id:'t5',type:'BUY',qty:17,price:609.70,date:'2024-11-15',currency:'USD'},
+      {id:'t6',type:'BUY',qty:16,price:640.39,date:'2025-01-01',currency:'USD'},
+      {id:'t7',type:'BUY',qty:1,price:661.43,date:'2025-01-15',currency:'USD'},
+      {id:'t8',type:'BUY',qty:15,price:686.20,date:'2025-03-01',currency:'USD'},
+      {id:'t9',type:'BUY',qty:6,price:695.01,date:'2025-04-01',currency:'USD'},
+      {id:'t10',type:'BUY',qty:1.62346,price:722.88,date:'2025-05-01',currency:'USD'},
+      {id:'t11',type:'SELL',qty:113.62346,price:751.81,date:'2025-07-01',currency:'USD',note:'Transfer out'}
+    ]},
+    {id:'p2',ticker:'HOOD',name:'Robinhood Markets',status:'closed',trades:[
+      {id:'t12',type:'BUY',qty:682,price:17.61,date:'2024-07-01',currency:'USD'},
+      {id:'t13',type:'BUY',qty:142,price:28.11,date:'2024-08-01',currency:'USD'},
+      {id:'t14',type:'BUY',qty:206,price:40.15,date:'2024-10-01',currency:'USD'},
+      {id:'t15',type:'BUY',qty:85,price:37.88,date:'2024-11-01',currency:'USD'},
+      {id:'t16',type:'SELL',qty:206,price:41.80,date:'2024-11-15',currency:'USD'},
+      {id:'t17',type:'SELL',qty:618,price:43.59,date:'2024-12-01',currency:'USD'},
+      {id:'t18',type:'SELL',qty:291,price:48.67,date:'2025-01-01',currency:'USD'}
+    ]},
+    {id:'p3',ticker:'COIN',name:'Coinbase Global',status:'closed',trades:[
+      {id:'t19',type:'BUY',qty:16,price:257.05,date:'2024-07-01',currency:'USD'},
+      {id:'t20',type:'BUY',qty:16,price:309.75,date:'2024-10-01',currency:'USD'},
+      {id:'t21',type:'SELL',qty:16,price:343.73,date:'2024-11-01',currency:'USD'},
+      {id:'t22',type:'SELL',qty:16,price:372.09,date:'2025-01-01',currency:'USD'}
+    ]},
+    {id:'p4',ticker:'CONL',name:'2x Long Coinbase ETF',status:'closed',trades:[
+      {id:'t23',type:'BUY',qty:203,price:73.80,date:'2024-07-01',currency:'USD'},
+      {id:'t24',type:'BUY',qty:93,price:54.24,date:'2024-10-01',currency:'USD'},
+      {id:'t25',type:'BUY',qty:88,price:56.71,date:'2024-11-01',currency:'USD'},
+      {id:'t26',type:'BUY',qty:53,price:56.50,date:'2024-11-15',currency:'USD'},
+      {id:'t27',type:'BUY',qty:88,price:56.64,date:'2025-01-01',currency:'USD'},
+      {id:'t28',type:'BUY',qty:50,price:56.48,date:'2025-01-15',currency:'USD'},
+      {id:'t29',type:'SELL',qty:575,price:52.40,date:'2025-02-01',currency:'USD'}
+    ]},
+    {id:'p5',ticker:'URA',name:'Global X Uranium ETF',status:'closed',trades:[
+      {id:'t30',type:'BUY',qty:95,price:31.48,date:'2024-07-01',currency:'USD'},
+      {id:'t31',type:'BUY',qty:170,price:50.25,date:'2025-01-01',currency:'USD'},
+      {id:'t32',type:'BUY',qty:170,price:59.08,date:'2025-02-01',currency:'USD'},
+      {id:'t33',type:'BUY',qty:82,price:48.89,date:'2025-03-01',currency:'USD'},
+      {id:'t34',type:'SELL',qty:318,price:46.31,date:'2025-04-01',currency:'USD'},
+      {id:'t35',type:'SELL',qty:199,price:51.02,date:'2025-07-01',currency:'USD'}
+    ]},
+    {id:'p6',ticker:'MSTR',name:'MicroStrategy',status:'closed',trades:[
+      {id:'t36',type:'BUY',qty:13,price:388.17,date:'2025-01-01',currency:'USD'},
+      {id:'t37',type:'BUY',qty:8,price:387.53,date:'2025-01-15',currency:'USD'},
+      {id:'t38',type:'SELL',qty:21,price:396.34,date:'2025-02-01',currency:'USD'}
+    ]},
+    {id:'p7',ticker:'MSFT',name:'Microsoft',status:'closed',trades:[
+      {id:'t39',type:'BUY',qty:16,price:520.69,date:'2025-01-01',currency:'USD'},
+      {id:'t40',type:'BUY',qty:9,price:485.89,date:'2025-03-01',currency:'USD'},
+      {id:'t41',type:'SELL',qty:12,price:421.37,date:'2025-04-01',currency:'USD'},
+      {id:'t42',type:'SELL',qty:13,price:415.38,date:'2025-07-01',currency:'USD'}
+    ]},
+    {id:'p8',ticker:'GLD',name:'SPDR Gold Shares',status:'closed',trades:[
+      {id:'t43',type:'BUY',qty:13.44,price:445.00,date:'2025-04-01',currency:'USD'},
+      {id:'t44',type:'SELL',qty:13.44,price:414.14,date:'2025-07-01',currency:'USD'}
+    ]},
+    {id:'p9',ticker:'INDA',name:'iShares MSCI India ETF',status:'closed',trades:[
+      {id:'t45',type:'BUY',qty:80,price:50.37,date:'2025-04-01',currency:'USD'},
+      {id:'t46',type:'SELL',qty:80,price:48.62,date:'2025-07-01',currency:'USD'}
+    ]},
+    {id:'p10',ticker:'AVGO',name:'Broadcom Inc.',status:'closed',trades:[
+      {id:'t47',type:'BUY',qty:5,price:398.63,date:'2025-04-01',currency:'USD'},
+      {id:'t48',type:'BUY',qty:2,price:399.00,date:'2025-04-15',currency:'USD'},
+      {id:'t49',type:'SELL',qty:7,price:427.82,date:'2025-07-01',currency:'USD'}
+    ]},
+    {id:'p11',ticker:'1810.HK',name:'Xiaomi Corp',status:'open',currency:'HKD',trades:[
+      {id:'t50',type:'BUY',qty:1400,price:39.655,date:'2025-05-01',currency:'HKD',note:'Open position'}
+    ]},
+    {id:'p12',ticker:'03188.HK',name:'ChinaAMC CSI 300 ETF',status:'open',currency:'HKD',trades:[
+      {id:'t51',type:'BUY',qty:600,price:54.82,date:'2025-05-01',currency:'HKD',note:'Open position'}
+    ]},
+    {id:'p13',ticker:'Amova',name:'Amova (Private)',status:'open',currency:'USD',trades:[
+      {id:'t52',type:'BUY',qty:1.79142,price:279.11,date:'2025-05-01',currency:'USD'}
+    ]},
+    {id:'p14',ticker:'SPY',name:'SPDR S&P 500 ETF',status:'open',trades:[
+      {id:'t53',type:'BUY',qty:134,price:742.95,date:'2025-09-01',commission:92.46,currency:'USD',note:'129+5 shares'},
+      {id:'t54',type:'BUY',qty:30,price:739.96,date:'2025-09-02',commission:20.69,currency:'USD'},
+      {id:'t55',type:'BUY',qty:2,price:753.48,date:'2025-09-03',commission:1.04,currency:'USD'}
+    ]},
+    {id:'p15',ticker:'GOOG',name:'Alphabet Inc.',status:'open',trades:[
+      {id:'t56',type:'BUY',qty:30,price:360.68,date:'2025-09-01',commission:7.47,currency:'USD'}
+    ]},
+    {id:'p16',ticker:'AAPL',name:'Apple Inc.',status:'open',trades:[
+      {id:'t57',type:'BUY',qty:55,price:295.63,date:'2025-09-01',commission:11.22,currency:'USD'}
+    ]},
+    {id:'p17',ticker:'AVGO',name:'Broadcom Inc.',status:'open',trades:[
+      {id:'t58',type:'BUY',qty:20,price:393.83,date:'2025-09-01',commission:5.43,currency:'USD'}
+    ]},
+    {id:'p18',ticker:'SCCO',name:'Southern Copper Corp.',status:'open',trades:[
+      {id:'t59',type:'BUY',qty:40,price:196.55,date:'2025-09-01',commission:5.42,currency:'USD'}
+    ]}
+  ],
+  funds:[
+    {id:'f1',date:'2024-07-01',desc:'Initial capital',type:'initial',amount:60960.76,note:'Pre-ledger buys: SPY, HOOD, COIN, URA, CONL'},
+    {id:'f2',date:'2024-10-01',desc:'Top-up 1',type:'topup',amount:10015.00},
+    {id:'f3',date:'2024-11-01',desc:'Top-up 2',type:'topup',amount:7679.52},
+    {id:'f4',date:'2025-01-01',desc:'Top-up 3',type:'topup',amount:10000.00},
+    {id:'f5',date:'2025-01-15',desc:'Top-up 4',type:'topup',amount:4170.06},
+    {id:'f6',date:'2025-03-01',desc:'Top-up 5',type:'topup',amount:1570.12},
+    {id:'f7',date:'2025-04-01',desc:'Top-up 6',type:'topup',amount:2048.35},
+    {id:'f8',date:'2025-09-01',desc:'Transfer in — IBKR (from Tiger)',type:'transfer',amount:113426.55,note:'All Tiger positions closed & transferred'}
+  ],
+  ibkrCash:0
+};
+
+const TOTAL_INITIAL  = 60960.76;
+const TOTAL_TOPUPS   = 10015+7679.52+10000+4170.06+1570.12+2048.35;
+const TOTAL_INJECTED = TOTAL_INITIAL+TOTAL_TOPUPS;
+const TIGER_TRANSFER = 113426.55;
+const TIGER_PNL      = TIGER_TRANSFER-TOTAL_INJECTED;
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let S = { positions:[], funds:[], ibkrCash:0 };
+let quotes = {};
+let apiKey  = '';
+let editingTrade = null; // {posId, tradeId}
+let tradeSide = 'BUY';
+
+function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+// ─── PERSISTENCE ─────────────────────────────────────────────────────────────
+function load() {
+  try {
+    const raw = localStorage.getItem('straker_v2');
+    if (raw) { const p=JSON.parse(raw); S.positions=p.positions||[]; S.funds=p.funds||[]; S.ibkrCash=p.ibkrCash||0; }
+    else { resetToSeed(false); }
+    apiKey = localStorage.getItem('straker_apikey')||'';
+    if (apiKey) document.getElementById('fApiKey').value = apiKey;
+  } catch(e) { resetToSeed(false); }
+}
+function save() {
+  try { localStorage.setItem('straker_v2', JSON.stringify({positions:S.positions,funds:S.funds,ibkrCash:S.ibkrCash})); } catch(e){}
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function fmt(n,d=2){ return Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function fmtUSD(n){ return (n<0?'-$':'$')+fmt(Math.abs(n)); }
+function sign(n){ return n>=0?'+':''; }
+function calcPos(pos){
+  let bq=0,bv=0,sq=0,sv=0;
+  pos.trades.forEach(t=>{ if(t.type==='BUY'){bq+=Number(t.qty);bv+=Number(t.qty)*Number(t.price);}else{sq+=Number(t.qty);sv+=Number(t.qty)*Number(t.price);} });
+  const avg=bq>0?bv/bq:0, net=bq-sq;
+  return {buyQty:bq,buyVal:bv,sellQty:sq,sellVal:sv,avgBuy:avg,netQty:net,costBasis:net*avg};
+}
+
+// ─── LIVE PRICES (Alpha Vantage) ─────────────────────────────────────────────
+const AV_TICKERS = ['SPY','GOOG','AAPL','AVGO','SCCO'];
+async function fetchQuotes(){
+  if (!apiKey) { setLiveStatus(false,'No API key'); return; }
+  setLiveStatus(null,'Fetching…');
+  let ok=0;
+  for (const t of AV_TICKERS){
+    try {
+      const url=`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${t}&apikey=${apiKey}`;
+      const r=await fetch(url); const d=await r.json();
+      const q=d['Global Quote'];
+      if (q && q['05. price']){
+        quotes[t]={ price:parseFloat(q['05. price']), changePct:parseFloat(q['10. change percent']||'0') };
+        ok++;
+      }
+    } catch(e){}
+  }
+  setLiveStatus(ok>0, ok>0?'Live':'Failed');
+  renderAll();
+}
+function setLiveStatus(live, label){
+  const pill=document.getElementById('livePill');
+  const lbl=document.getElementById('liveLabel');
+  lbl.textContent=label;
+  if (live===true){ pill.className='live-pill'; }
+  else if (live===false){ pill.className='live-pill offline'; }
+  else { pill.className='live-pill'; }
+}
+function refreshQuotes(){ fetchQuotes(); }
+
+// ─── NAVIGATION ──────────────────────────────────────────────────────────────
+let currentTab = 'overview';
+function nav(name, btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sec-'+name).classList.add('active');
+  btn.classList.add('active');
+  document.getElementById('scrollArea').scrollTop=0;
+  currentTab=name;
+  document.getElementById('fab').style.display=(name==='positions'||name==='trades')?'flex':'none';
+}
+
+// ─── TRADE SHEET ─────────────────────────────────────────────────────────────
+function openTradeSheet(posId, tradeId){
+  editingTrade=null;
+  document.getElementById('tradeSheetTitle').textContent='Log trade';
+  document.getElementById('tradeSubmitBtn').textContent='Log trade';
+  document.getElementById('editDeleteBtn').style.display='none';
+  setSide('BUY');
+  document.getElementById('fTicker').value='';
+  document.getElementById('fName').value='';
+  document.getElementById('fQty').value='';
+  document.getElementById('fPrice').value='';
+  document.getElementById('fComm').value='';
+  document.getElementById('fDate').value=new Date().toISOString().slice(0,10);
+  document.getElementById('fCurrency').value='USD';
+  document.getElementById('fNote').value='';
+  document.getElementById('tradeTotal').textContent='';
+
+  if (posId && tradeId){
+    const pos=S.positions.find(p=>p.id===posId);
+    const tr=pos&&pos.trades.find(t=>t.id===tradeId);
+    if (pos&&tr){
+      editingTrade={posId,tradeId};
+      document.getElementById('tradeSheetTitle').textContent='Edit trade';
+      document.getElementById('tradeSubmitBtn').textContent='Save changes';
+      document.getElementById('editDeleteBtn').style.display='block';
+      setSide(tr.type);
+      document.getElementById('fTicker').value=pos.ticker;
+      document.getElementById('fName').value=pos.name||'';
+      document.getElementById('fQty').value=tr.qty;
+      document.getElementById('fPrice').value=tr.price;
+      document.getElementById('fComm').value=tr.commission||'';
+      document.getElementById('fDate').value=tr.date||'';
+      document.getElementById('fCurrency').value=tr.currency||'USD';
+      document.getElementById('fNote').value=tr.note||'';
+      updateTradeTotal();
+    }
+  }
+  document.getElementById('tradeSheet').classList.add('open');
+}
+function setSide(side){
+  tradeSide=side;
+  document.getElementById('segBuy').className='seg-btn'+(side==='BUY'?' active-buy':'');
+  document.getElementById('segSell').className='seg-btn'+(side==='SELL'?' active-sell':'');
+}
+function updateTradeTotal(){
+  const q=parseFloat(document.getElementById('fQty').value)||0;
+  const p=parseFloat(document.getElementById('fPrice').value)||0;
+  const c=parseFloat(document.getElementById('fComm').value)||0;
+  const cur=document.getElementById('fCurrency').value;
+  if (q&&p){ document.getElementById('tradeTotal').textContent=`Total: ${cur} ${fmt(q*p)} + comm ${fmt(c)}`; }
+  else { document.getElementById('tradeTotal').textContent=''; }
+}
+['fQty','fPrice','fComm'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('input',updateTradeTotal); });
+
+function submitTrade(){
+  const ticker=(document.getElementById('fTicker').value||'').trim().toUpperCase();
+  const name=(document.getElementById('fName').value||'').trim()||ticker;
+  const qty=parseFloat(document.getElementById('fQty').value);
+  const price=parseFloat(document.getElementById('fPrice').value);
+  const comm=parseFloat(document.getElementById('fComm').value)||0;
+  const date=document.getElementById('fDate').value||new Date().toISOString().slice(0,10);
+  const currency=document.getElementById('fCurrency').value;
+  const note=(document.getElementById('fNote').value||'').trim();
+  if (!ticker||!qty||!price){ showToast('Ticker, quantity and price are required'); return; }
+
+  if (editingTrade){
+    const pos=S.positions.find(p=>p.id===editingTrade.posId);
+    const tr=pos&&pos.trades.find(t=>t.id===editingTrade.tradeId);
+    if (pos&&tr){
+      tr.type=tradeSide; tr.qty=qty; tr.price=price; tr.commission=comm||undefined;
+      tr.date=date; tr.currency=currency; tr.note=note||undefined;
+      pos.ticker=ticker; pos.name=name;
+      recomputeStatus(pos);
+    }
+  } else {
+    // find existing open position with same ticker, or create new
+    let pos=S.positions.find(p=>p.ticker===ticker&&p.status==='open');
+    if (!pos){
+      pos={id:'p'+uid(),ticker,name,status:'open',trades:[]};
+      S.positions.push(pos);
+    } else {
+      if (name&&name!==ticker) pos.name=name;
+    }
+    pos.trades.push({id:'t'+uid(),type:tradeSide,qty,price,commission:comm||undefined,date,currency,note:note||undefined});
+    recomputeStatus(pos);
+  }
+  save(); renderAll(); closeSheet('tradeSheet');
+  showToast(editingTrade?'Trade updated':'Trade logged');
+}
+
+function recomputeStatus(pos){
+  const c=calcPos(pos);
+  if (c.netQty<=0.0001 && c.sellQty>0) pos.status='closed';
+  else pos.status='open';
+}
+
+function deleteTrade(){
+  if (!editingTrade) return;
+  confirm2('Delete trade?','This cannot be undone.',()=>{
+    const pos=S.positions.find(p=>p.id===editingTrade.posId);
+    if (pos){ pos.trades=pos.trades.filter(t=>t.id!==editingTrade.tradeId); recomputeStatus(pos); }
+    save(); renderAll(); closeSheet('tradeSheet'); showToast('Trade deleted');
+  });
+}
+
+// ─── RENDER OVERVIEW ─────────────────────────────────────────────────────────
+function renderOverview(){
+  const el=document.getElementById('sec-overview');
+  const open=S.positions.filter(p=>p.status==='open');
+  let totMkt=0,totCost=0;
+  open.forEach(p=>{
+    const c=calcPos(p); const q=quotes[p.ticker];
+    totMkt+=q?c.netQty*q.price:c.costBasis;
+    totCost+=c.costBasis;
+  });
+  const openPnl=totMkt-totCost;
+  const totalPnl=TIGER_PNL+openPnl;
+  const totalPct=(totalPnl/TOTAL_INJECTED)*100;
+
+  el.innerHTML=`
+  <div class="metrics">
+    <div class="metric"><div class="mlabel">Total injected</div><div class="mvalue neutral">${fmtUSD(TOTAL_INJECTED)}</div></div>
+    <div class="metric"><div class="mlabel">Total return</div><div class="mvalue ${totalPct>=0?'gain':'loss'}">${sign(totalPct)}${fmt(totalPct,1)}%</div></div>
+    <div class="metric"><div class="mlabel">Tiger P&L (closed)</div><div class="mvalue ${TIGER_PNL>=0?'gain':'loss'}">${sign(TIGER_PNL)}${fmtUSD(TIGER_PNL)}</div></div>
+    <div class="metric"><div class="mlabel">Open P&L</div><div class="mvalue ${openPnl>=0?'gain':'loss'}">${sign(openPnl)}${fmtUSD(openPnl)}</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Open positions</div>
+    ${open.length===0?`<div class="empty" style="padding:20px 0"><p>No open positions yet.<br>Tap + to log your first trade.</p></div>`:''}
+    ${open.map(p=>{
+      const c=calcPos(p); const q=quotes[p.ticker];
+      const mv=q?c.netQty*q.price:c.costBasis;
+      const pnl=mv-c.costBasis; const pct=c.costBasis>0?(pnl/c.costBasis)*100:0;
+      const cur=p.currency&&p.currency!=='USD'?` ${p.currency}`:'';
+      const liveStr=q?` · $${fmt(q.price)} live`:'';
+      return `<div class="row">
+        <div class="rl">
+          <div class="rticker">${p.ticker}${p.currency&&p.currency!=='USD'?` <span class="badge b-hk">${p.currency}</span>`:''}</div>
+          <div class="rname">${fmt(c.netQty,3)} shares · avg${cur} ${fmt(c.avgBuy)}${liveStr}</div>
+        </div>
+        <div class="rr">
+          <div class="rval">${fmtUSD(mv)}</div>
+          <div class="rsub ${pnl>=0?'gain':'loss'}">${sign(pnl)}${fmtUSD(pnl)} (${sign(pct)}${fmt(pct,1)}%)</div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>
+  <div class="card">
+    <div class="card-title">Capital</div>
+    <div class="row"><div class="rl"><div class="rticker">Initial capital</div><div class="rname">Tiger pre-ledger buys</div></div><div class="rr"><div class="rval muted">${fmtUSD(TOTAL_INITIAL)}</div></div></div>
+    <div class="row"><div class="rl"><div class="rticker">Top-ups (6×)</div><div class="rname">Cash injections</div></div><div class="rr"><div class="rval muted">${fmtUSD(TOTAL_TOPUPS)}</div></div></div>
+    <div class="row"><div class="rl"><div class="rticker">IBKR uninvested cash</div><div class="rname">Manually zeroed</div></div><div class="rr"><div class="rval muted">$0.00</div></div></div>
+  </div>`;
+}
+
+// ─── RENDER POSITIONS ─────────────────────────────────────────────────────────
+function renderPositions(){
+  const el=document.getElementById('sec-positions');
+  const open=S.positions.filter(p=>p.status==='open');
+  const closed=S.positions.filter(p=>p.status==='closed');
+
+  function posCard(p,idx){
+    const c=calcPos(p); const q=quotes[p.ticker];
+    let pnl=0,pct=0;
+    if(p.status==='closed'){pnl=c.sellVal-c.buyVal;pct=c.buyVal>0?(pnl/c.buyVal)*100:0;}
+    else{const mv=q?c.netQty*q.price:c.costBasis;pnl=mv-c.costBasis;pct=c.costBasis>0?(pnl/c.costBasis)*100:0;}
+    const mv=p.status==='open'?(q?c.netQty*q.price:c.costBasis):null;
+    const cur=p.currency&&p.currency!=='USD'?p.currency:'USD';
+
+    const rows=p.trades.map(t=>`
+      <tr class="${t.type==='BUY'?'buy-r':'sell-r'}">
+        <td style="width:38px">${t.type}</td>
+        <td>${fmt(t.qty,3)}</td>
+        <td>$${fmt(t.price)}</td>
+        <td>$${fmt(t.qty*t.price)}</td>
+        <td style="text-align:right;width:52px">
+          <button class="edit-trade-btn" onclick="event.stopPropagation();openTradeSheet('${p.id}','${t.id}')">Edit</button>
+        </td>
+      </tr>`).join('');
+
+    return `<div class="card" style="padding:11px 13px">
+      <div class="row tappable" style="cursor:pointer" onclick="tog('d${idx}')">
+        <div class="rl">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="rticker">${p.ticker}</span>
+            <span class="badge ${p.status==='open'?'b-open':'b-closed'}">${p.status}</span>
+            ${cur!=='USD'?`<span class="badge b-hk">${cur}</span>`:''}
+          </div>
+          <div class="rname">${p.name}${c.netQty>0?` · ${fmt(c.netQty,2)} sh`:''} · avg $${fmt(c.avgBuy)}</div>
+        </div>
+        <div class="rr">
+          ${mv!==null?`<div class="rval">${fmtUSD(mv)}</div>`:''}
+          <div class="rsub ${pnl>=0?'gain':'loss'}">${sign(pnl)}${fmtUSD(pnl)} (${sign(pct)}${fmt(pct,1)}%)</div>
+        </div>
+      </div>
+      <div class="detail" id="d${idx}">
+        <table class="dtbl">
+          <thead><tr><th>Side</th><th>Qty</th><th>Price</th><th>Total</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        ${q&&c.netQty>0?`<div style="margin-top:8px;font-size:11px;color:var(--text2)">Live $${fmt(q.price)} · Mkt val ${fmtUSD(c.netQty*q.price)} · ${sign(q.changePct)}${fmt(q.changePct,2)}% today</div>`:''}
+      </div>
+    </div>`;
+  }
+
+  el.innerHTML=`
+    <div class="slabel">Open positions (${open.length})</div>
+    ${open.length?open.map((p,i)=>posCard(p,'o'+i)).join(''):'<div class="card"><p style="font-size:13px;color:var(--text2)">No open positions. Tap + to log a trade.</p></div>'}
+    <div class="slabel">Closed positions (${closed.length})</div>
+    ${closed.map((p,i)=>posCard(p,'c'+i)).join('')}
+  `;
+}
+
+function tog(id){ const el=document.getElementById(id); if(el) el.classList.toggle('open'); }
+
+// ─── RENDER TRADES ────────────────────────────────────────────────────────────
+function renderTrades(){
+  const el=document.getElementById('sec-trades');
+  const all=[];
+  S.positions.forEach(p=>p.trades.forEach(t=>all.push({...t,ticker:p.ticker,posId:p.id})));
+  all.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const buys=all.filter(t=>t.type==='BUY');
+  const sells=all.filter(t=>t.type==='SELL');
+
+  function txRow(t){
+    return `<div class="tx-row">
+      <div class="tx-l">
+        <div style="display:flex;align-items:center;gap:5px">
+          <span style="font-size:13px;font-weight:700">${t.ticker}</span>
+          <span class="badge ${t.type==='BUY'?'b-buy':'b-sell'}">${t.type}</span>
+          ${t.currency&&t.currency!=='USD'?`<span class="badge b-hk">${t.currency}</span>`:''}
+        </div>
+        <div class="tx-meta">${fmt(t.qty,3)} × ${t.currency||'USD'} ${fmt(t.price)} · ${t.date||'—'}${t.commission?' · comm $'+fmt(t.commission):''}${t.note?' · '+t.note:''}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-left:8px">
+        <div class="rval ${t.type==='BUY'?'loss':'gain'}" style="font-size:13px">${t.type==='BUY'?'-':'+'}${fmtUSD(t.qty*t.price)}</div>
+        <button class="edit-trade-btn" onclick="openTradeSheet('${t.posId}','${t.id}')">Edit</button>
+      </div>
+    </div>`;
+  }
+
+  el.innerHTML=`
+    <div class="card"><div class="card-title">Buy orders (${buys.length})</div>${buys.length?buys.map(txRow).join(''):'<p style="font-size:13px;color:var(--text2)">None yet</p>'}</div>
+    <div class="card"><div class="card-title">Sell orders (${sells.length})</div>${sells.length?sells.map(txRow).join(''):'<p style="font-size:13px;color:var(--text2)">None yet</p>'}</div>
+  `;
+}
+
+// ─── RENDER FUNDS ─────────────────────────────────────────────────────────────
+function renderFunds(){
+  const el=document.getElementById('sec-funds');
+  el.innerHTML=`
+  <div class="metrics">
+    <div class="metric"><div class="mlabel">Total principal</div><div class="mvalue neutral">${fmtUSD(TOTAL_INJECTED)}</div></div>
+    <div class="metric"><div class="mlabel">Tiger P&L</div><div class="mvalue gain">+${fmtUSD(TIGER_PNL)}</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Fund flow history</div>
+    ${S.funds.map(f=>`<div class="fund-row">
+      <div><div class="fdesc">${f.desc}</div><div class="fnote">${f.date||''}${f.note?' · '+f.note:''}</div></div>
+      <div class="famt">${fmtUSD(f.amount)}</div>
+    </div>`).join('')}
+  </div>
+  <div class="card">
+    <div class="card-title">Tiger → IBKR bridge</div>
+    <div class="fund-row"><div><div class="fdesc">Transfer value</div><div class="fnote">All Tiger positions closed</div></div><div class="famt">${fmtUSD(TIGER_TRANSFER)}</div></div>
+    <div class="fund-row"><div><div class="fdesc">Tiger return</div></div><div class="famt gain">+${fmtUSD(TIGER_PNL)} (+${fmt((TIGER_PNL/TOTAL_INJECTED)*100,1)}%)</div></div>
+    <div class="fund-row"><div><div class="fdesc">IBKR uninvested cash</div><div class="fnote">Manually zeroed — fully deployed</div></div><div class="famt" style="color:var(--text2)">$0.00</div></div>
+  </div>`;
+}
+
+// ─── RENDER SETTINGS ─────────────────────────────────────────────────────────
+function renderSettings(){
+  const el=document.getElementById('sec-settings');
+  const tradeCount=S.positions.reduce((a,p)=>a+p.trades.length,0);
+  el.innerHTML=`
+  <div class="metrics" style="margin-bottom:14px">
+    <div class="metric"><div class="mlabel">Positions</div><div class="mvalue neutral">${S.positions.length}</div></div>
+    <div class="metric"><div class="mlabel">Total trades</div><div class="mvalue neutral">${tradeCount}</div></div>
+  </div>
+  <div class="sgroup">
+    <div class="sgroup-title">Live prices</div>
+    <div class="srow" onclick="openSheet('apiSheet')">
+      <div class="srow-l">
+        <div class="srow-title">${apiKey?'Change API key':'Set API key'}</div>
+        <div class="srow-desc">${apiKey?'Alpha Vantage key saved · tap to update':'Required for live prices — free from alphavantage.co'}</div>
+      </div>
+      <div class="srow-icon"><svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div>
+    </div>
+    <div class="srow" onclick="refreshQuotes()">
+      <div class="srow-l">
+        <div class="srow-title">Refresh prices now</div>
+        <div class="srow-desc">Fetch latest quotes from Alpha Vantage</div>
+      </div>
+      <div class="srow-icon"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></div>
+    </div>
+  </div>
+  <div class="sgroup">
+    <div class="sgroup-title">Data</div>
+    <div class="srow" onclick="openExport()">
+      <div class="srow-l"><div class="srow-title">Export data</div><div class="srow-desc">Copy JSON to save or move to a new device</div></div>
+      <div class="srow-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+    </div>
+    <div class="srow" onclick="openSheet('importSheet')">
+      <div class="srow-l"><div class="srow-title">Import data</div><div class="srow-desc">Restore from a previously exported Straker JSON</div></div>
+      <div class="srow-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+    </div>
+  </div>
+  <div class="sgroup">
+    <div class="sgroup-title">Danger zone</div>
+    <div class="srow" onclick="doReset()">
+      <div class="srow-l"><div class="srow-title danger">Reset to seed data</div><div class="srow-desc">Restore original pre-loaded portfolio</div></div>
+      <div class="srow-icon" style="color:#e24b4a"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/></svg></div>
+    </div>
+    <div class="srow" onclick="doWipe()">
+      <div class="srow-l"><div class="srow-title danger">Wipe all data</div><div class="srow-desc">Delete everything and start from scratch</div></div>
+      <div class="srow-icon" style="color:#e24b4a"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></div>
+    </div>
+  </div>
+  <div class="sgroup">
+    <div class="sgroup-title">About</div>
+    <div class="srow" style="cursor:default"><div class="srow-l"><div class="srow-title">Straker</div><div class="srow-desc">Version 2.0 · Built for Justin</div></div></div>
+    <div class="srow" style="cursor:default"><div class="srow-l"><div class="srow-title">Storage</div><div class="srow-desc">localStorage — data stays on this device</div></div></div>
+  </div>`;
+}
+
+// ─── RENDER ALL ───────────────────────────────────────────────────────────────
+function renderAll(){ renderOverview(); renderPositions(); renderTrades(); renderFunds(); renderSettings(); }
+
+// ─── SHEETS & MODALS ─────────────────────────────────────────────────────────
+function openSheet(id){ document.getElementById(id).classList.add('open'); }
+function closeSheet(id){ document.getElementById(id).classList.remove('open'); }
+function closeOverlay(id){ document.getElementById(id).classList.remove('open'); }
+
+function openExport(){
+  const payload=JSON.stringify({_straker:true,version:2,exportedAt:new Date().toISOString(),positions:S.positions,funds:S.funds,ibkrCash:S.ibkrCash},null,2);
+  document.getElementById('exportTA').value=payload;
+  openSheet('exportSheet');
+}
+function copyExport(){
+  const ta=document.getElementById('exportTA'); ta.select(); ta.setSelectionRange(0,99999);
+  try{ navigator.clipboard.writeText(ta.value).catch(()=>document.execCommand('copy')); }catch(e){ document.execCommand('copy'); }
+  const btn=document.getElementById('copyBtn'); btn.textContent='Copied!';
+  setTimeout(()=>btn.textContent='Copy all',1800);
+}
+function doImport(){
+  try{
+    const parsed=JSON.parse(document.getElementById('importTA').value.trim());
+    if(!parsed._straker||!parsed.positions||!parsed.funds) throw new Error();
+    S.positions=parsed.positions; S.funds=parsed.funds; S.ibkrCash=parsed.ibkrCash||0;
+    save(); renderAll(); closeSheet('importSheet'); showToast('Import successful');
+  }catch(e){ showToast('Import failed — check your JSON'); }
+}
+function saveApiKey(){
+  const key=(document.getElementById('fApiKey').value||'').trim();
+  if(!key){ showToast('Enter a valid API key'); return; }
+  apiKey=key; localStorage.setItem('straker_apikey',key);
+  closeSheet('apiSheet'); showToast('API key saved'); fetchQuotes();
+}
+function resetToSeed(ask=true){
+  const go=()=>{ S.positions=JSON.parse(JSON.stringify(SEED.positions)); S.funds=JSON.parse(JSON.stringify(SEED.funds)); S.ibkrCash=0; save(); renderAll(); showToast('Reset to seed data'); };
+  if(!ask){ go(); return; }
+  confirm2('Reset to seed data?','This restores the original pre-loaded portfolio and overwrites any changes.',go);
+}
+function doReset(){ resetToSeed(true); }
+function doWipe(){
+  confirm2('Wipe all data?','This permanently deletes everything. Export first if you want a backup.',()=>{
+    S.positions=[]; S.funds=[]; S.ibkrCash=0; save(); renderAll(); showToast('All data wiped');
+  });
+}
+function confirm2(title,msg,fn){
+  document.getElementById('confirmTitle').textContent=title;
+  document.getElementById('confirmMsg').textContent=msg;
+  document.getElementById('confirmOk').onclick=()=>{ closeOverlay('confirmOverlay'); fn(); };
+  document.getElementById('confirmOverlay').classList.add('open');
+}
+
+// ─── TOAST ───────────────────────────────────────────────────────────────────
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+load();
+renderAll();
+if(apiKey) fetchQuotes();
+</script>
+</body>
+</html>
