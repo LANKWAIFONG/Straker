@@ -509,24 +509,44 @@ function calcPos(pos){
   return {buyQty:bq,buyVal:bv,sellQty:sq,sellVal:sv,avgBuy:avg,netQty:net,costBasis:net*avg};
 }
 
-// ─── LIVE PRICES (Alpha Vantage) ─────────────────────────────────────────────
-const AV_TICKERS = ['SPY','GOOG','AAPL','AVGO','SCCO'];
+// ─── LIVE PRICES (Alpha Vantage — dynamic) ───────────────────────────────────
+// Skips private/unlisted tickers that will never have a quote
+const SKIP_QUOTE = ['AMOVA','PRIVATE'];
+
+function getLiveTickers(){
+  // Deduplicate tickers across all open positions only
+  const seen = new Set();
+  S.positions.forEach(p => {
+    if (p.status !== 'open') return;
+    const t = (p.ticker||'').toUpperCase();
+    if (!SKIP_QUOTE.includes(t)) seen.add(t);
+  });
+  return [...seen];
+}
+
 async function fetchQuotes(){
   if (!apiKey) { setLiveStatus(false,'No API key'); return; }
-  setLiveStatus(null,'Fetching…');
-  let ok=0;
-  for (const t of AV_TICKERS){
+  const tickers = getLiveTickers();
+  if (!tickers.length) { setLiveStatus(false,'No open positions'); return; }
+  setLiveStatus(null,`Fetching ${tickers.length} ticker${tickers.length>1?'s':''}…`);
+  let ok=0, failed=[];
+  for (const t of tickers){
     try {
-      const url=`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${t}&apikey=${apiKey}`;
+      const url=`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(t)}&apikey=${apiKey}`;
       const r=await fetch(url); const d=await r.json();
       const q=d['Global Quote'];
       if (q && q['05. price']){
-        quotes[t]={ price:parseFloat(q['05. price']), changePct:parseFloat(q['10. change percent']||'0') };
+        quotes[t]={ price:parseFloat(q['05. price']), changePct:parseFloat((q['10. change percent']||'0%').replace('%','')) };
         ok++;
+      } else {
+        // Alpha Vantage rate limit message
+        if (d['Note']||d['Information']) { setLiveStatus(false,'Rate limited — wait 1 min'); return; }
+        failed.push(t);
       }
-    } catch(e){}
+    } catch(e){ failed.push(t); }
   }
-  setLiveStatus(ok>0, ok>0?'Live':'Failed');
+  const label = ok===tickers.length ? 'Live' : ok>0 ? `Live (${failed.join(', ')} failed)` : 'Failed';
+  setLiveStatus(ok>0, label);
   renderAll();
 }
 function setLiveStatus(live, label){
@@ -835,7 +855,7 @@ function renderSettings(){
     <div class="srow" onclick="openSheet('apiSheet')">
       <div class="srow-l">
         <div class="srow-title">${apiKey?'Change API key':'Set API key'}</div>
-        <div class="srow-desc">${apiKey?'Alpha Vantage key saved · tap to update':'Required for live prices — free from alphavantage.co'}</div>
+        <div class="srow-desc">${apiKey?'Alpha Vantage key saved · fetches all your open tickers automatically':'Required for live prices — free from alphavantage.co'}</div>
       </div>
       <div class="srow-icon"><svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div>
     </div>
