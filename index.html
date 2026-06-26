@@ -175,6 +175,30 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .empty{text-align:center;padding:40px 20px;color:var(--text3)}
 .empty svg{width:40px;height:40px;stroke:var(--text3);fill:none;stroke-width:1.5;margin-bottom:12px;stroke-linecap:round;stroke-linejoin:round}
 .empty p{font-size:14px;line-height:1.6}
+
+/* TICKER SEARCH DROPDOWN */
+.ticker-wrap{position:relative;margin-bottom:13px}
+.ticker-wrap label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.04em}
+.ticker-input-row{position:relative}
+.ticker-input-row input{width:100%;padding:11px 12px 11px 36px;border:0.5px solid var(--border2);border-radius:var(--rsm);background:var(--surface2);color:var(--text);font-size:15px;font-family:-apple-system,sans-serif;outline:none;-webkit-appearance:none}
+.ticker-input-row input:focus{border-color:var(--teal)}
+.ticker-search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;stroke:var(--text3);fill:none;stroke-width:2;stroke-linecap:round;pointer-events:none}
+.ticker-selected{display:flex;align-items:center;gap:8px;background:var(--teal-l);border:0.5px solid var(--teal);border-radius:var(--rsm);padding:10px 12px;margin-bottom:13px}
+.ticker-sel-sym{font-size:15px;font-weight:700;color:var(--teal-d);min-width:54px}
+.ticker-sel-info{flex:1;min-width:0}
+.ticker-sel-name{font-size:12px;color:var(--teal-d);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ticker-sel-meta{font-size:10px;color:var(--teal);margin-top:1px}
+.ticker-clear{font-size:11px;font-weight:700;color:var(--teal);background:none;border:none;cursor:pointer;padding:4px;flex-shrink:0}
+.ticker-dropdown{position:absolute;top:calc(100% + 3px);left:0;right:0;background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--rsm);z-index:600;overflow:hidden;max-height:210px;overflow-y:auto}
+.ticker-opt{display:flex;align-items:center;gap:10px;padding:11px 13px;cursor:pointer;border-bottom:0.5px solid var(--border)}
+.ticker-opt:last-child{border-bottom:none}
+.ticker-opt:active,.ticker-opt.focused{background:var(--teal-l)}
+.ticker-opt-sym{font-size:13px;font-weight:700;color:var(--text);min-width:58px}
+.ticker-opt-name{font-size:12px;color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ticker-opt-region{font-size:10px;font-weight:600;color:var(--text3);flex-shrink:0}
+.ticker-msg{padding:12px 13px;font-size:13px;color:var(--text3);text-align:center}
+.ticker-no-key{padding:12px 13px;font-size:12px;color:var(--text2);line-height:1.6}
+
 </style>
 </head>
 <body>
@@ -236,13 +260,26 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
       <button class="seg-btn active-buy" id="segBuy" onclick="setSide('BUY')">Buy</button>
       <button class="seg-btn" id="segSell" onclick="setSide('SELL')">Sell</button>
     </div>
-    <div class="field">
-      <label>Ticker</label>
-      <input id="fTicker" placeholder="e.g. SPY, AAPL, 1810.HK" autocapitalize="characters" autocomplete="off">
+    <!-- TICKER SEARCH -->
+    <div class="ticker-wrap" id="tickerWrap">
+      <label>Ticker / stock</label>
+      <div class="ticker-input-row" id="tickerInputRow">
+        <svg class="ticker-search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="fTickerSearch" placeholder="Search e.g. SPY, Apple, 1810.HK…" autocapitalize="none" autocomplete="off" autocorrect="off" spellcheck="false" oninput="onTickerInput(this.value)" onkeydown="onTickerKey(event)">
+        <div class="ticker-dropdown" id="tickerDropdown" style="display:none"></div>
+      </div>
+      <!-- hidden inputs carry the confirmed values -->
+      <input type="hidden" id="fTicker">
+      <input type="hidden" id="fName">
     </div>
-    <div class="field">
-      <label>Name / description</label>
-      <input id="fName" placeholder="e.g. SPDR S&P 500 ETF">
+    <!-- shown after selection -->
+    <div class="ticker-selected" id="tickerSelected" style="display:none">
+      <span class="ticker-sel-sym" id="selSym"></span>
+      <div class="ticker-sel-info">
+        <div class="ticker-sel-name" id="selName"></div>
+        <div class="ticker-sel-meta" id="selMeta"></div>
+      </div>
+      <button class="ticker-clear" onclick="clearTickerSelection()" aria-label="Clear">✕</button>
     </div>
     <div class="field-row">
       <div class="field">
@@ -578,8 +615,7 @@ function openTradeSheet(posId, tradeId){
   document.getElementById('tradeSubmitBtn').textContent='Log trade';
   document.getElementById('editDeleteBtn').style.display='none';
   setSide('BUY');
-  document.getElementById('fTicker').value='';
-  document.getElementById('fName').value='';
+  clearTickerSelection();
   document.getElementById('fQty').value='';
   document.getElementById('fPrice').value='';
   document.getElementById('fComm').value='';
@@ -597,8 +633,7 @@ function openTradeSheet(posId, tradeId){
       document.getElementById('tradeSubmitBtn').textContent='Save changes';
       document.getElementById('editDeleteBtn').style.display='block';
       setSide(tr.type);
-      document.getElementById('fTicker').value=pos.ticker;
-      document.getElementById('fName').value=pos.name||'';
+      setTickerSelection(pos.ticker, pos.name||pos.ticker, '', pos.currency||'USD');
       document.getElementById('fQty').value=tr.qty;
       document.getElementById('fPrice').value=tr.price;
       document.getElementById('fComm').value=tr.commission||'';
@@ -624,6 +659,109 @@ function updateTradeTotal(){
   else { document.getElementById('tradeTotal').textContent=''; }
 }
 ['fQty','fPrice','fComm'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('input',updateTradeTotal); });
+
+// ─── TICKER SEARCH ───────────────────────────────────────────────────────────
+let searchTimer = null;
+let searchResults = [];
+let focusedIdx = -1;
+
+function onTickerInput(val) {
+  clearTimeout(searchTimer);
+  const dd = document.getElementById('tickerDropdown');
+  if (!val || val.length < 1) { dd.style.display='none'; searchResults=[]; return; }
+  dd.style.display='block';
+  if (!apiKey) {
+    dd.innerHTML='<div class="ticker-no-key">Set your Alpha Vantage API key in Settings to enable ticker search. You can still type the ticker manually — tap "Use as entered" to confirm.</div>' +
+      `<div class="ticker-opt" onclick="setTickerSelection('${val.toUpperCase()}','${val.toUpperCase()}','Manual entry','USD')"><span class="ticker-opt-sym">${val.toUpperCase()}</span><span class="ticker-opt-name">Use as entered</span></div>`;
+    return;
+  }
+  dd.innerHTML='<div class="ticker-msg">Searching…</div>';
+  searchTimer = setTimeout(()=>doTickerSearch(val), 380);
+}
+
+async function doTickerSearch(q) {
+  const dd = document.getElementById('tickerDropdown');
+  try {
+    const url = `https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=${encodeURIComponent(q)}&apikey=${apiKey}`;
+    const r = await fetch(url);
+    const d = await r.json();
+    if (d['Note']||d['Information']) {
+      dd.innerHTML='<div class="ticker-msg">Rate limited — wait a moment</div>';
+      return;
+    }
+    const matches = d['bestMatches']||[];
+    searchResults = matches.slice(0,8).map(m=>({
+      symbol: m['1. symbol'],
+      name: m['2. name'],
+      type: m['3. type'],
+      region: m['4. region'],
+      currency: m['8. currency']||'USD'
+    }));
+    // Always add "use as entered" at the bottom
+    searchResults.push({symbol:q.toUpperCase(),name:q.toUpperCase(),type:'Manual',region:'',currency:'USD',manual:true});
+    focusedIdx = -1;
+    renderDropdown();
+  } catch(e) {
+    dd.innerHTML=`<div class="ticker-opt" onclick="setTickerSelection('${q.toUpperCase()}','${q.toUpperCase()}','Manual entry','USD')"><span class="ticker-opt-sym">${q.toUpperCase()}</span><span class="ticker-opt-name">Use as entered</span></div>`;
+  }
+}
+
+function renderDropdown() {
+  const dd = document.getElementById('tickerDropdown');
+  if (!searchResults.length) { dd.innerHTML='<div class="ticker-msg">No results</div>'; return; }
+  dd.innerHTML = searchResults.map((r,i)=>`
+    <div class="ticker-opt${focusedIdx===i?' focused':''}" onclick="pickResult(${i})">
+      <span class="ticker-opt-sym">${r.symbol}</span>
+      <span class="ticker-opt-name">${r.name}</span>
+      <span class="ticker-opt-region">${r.manual?'Manual':(r.type||'')}${r.region?' · '+r.region:''}</span>
+    </div>`).join('');
+}
+
+function pickResult(i) {
+  const r = searchResults[i];
+  if (!r) return;
+  setTickerSelection(r.symbol, r.name, (r.type||'')+(r.region?' · '+r.region:''), r.currency||'USD');
+}
+
+function onTickerKey(e) {
+  const dd = document.getElementById('tickerDropdown');
+  if (dd.style.display==='none'||!searchResults.length) return;
+  if (e.key==='ArrowDown') { focusedIdx=Math.min(focusedIdx+1,searchResults.length-1); renderDropdown(); e.preventDefault(); }
+  else if (e.key==='ArrowUp') { focusedIdx=Math.max(focusedIdx-1,0); renderDropdown(); e.preventDefault(); }
+  else if (e.key==='Enter'&&focusedIdx>=0) { pickResult(focusedIdx); e.preventDefault(); }
+  else if (e.key==='Escape') { dd.style.display='none'; }
+}
+
+function setTickerSelection(symbol, name, meta, currency) {
+  document.getElementById('fTicker').value = symbol;
+  document.getElementById('fName').value = name;
+  document.getElementById('tickerInputRow').style.display = 'none';
+  document.getElementById('tickerDropdown').style.display = 'none';
+  const sel = document.getElementById('tickerSelected');
+  document.getElementById('selSym').textContent = symbol;
+  document.getElementById('selName').textContent = name;
+  document.getElementById('selMeta').textContent = meta||'';
+  sel.style.display = 'flex';
+  // auto-set currency if known
+  if (currency) {
+    const cur = document.getElementById('fCurrency');
+    const opt = [...cur.options].find(o=>o.value===currency.toUpperCase());
+    if (opt) cur.value = opt.value;
+  }
+  searchResults = [];
+}
+
+function clearTickerSelection() {
+  document.getElementById('fTicker').value = '';
+  document.getElementById('fName').value = '';
+  document.getElementById('tickerSelected').style.display = 'none';
+  document.getElementById('tickerInputRow').style.display = 'block';
+  document.getElementById('tickerDropdown').style.display = 'none';
+  const inp = document.getElementById('fTickerSearch');
+  inp.value = '';
+  searchResults = [];
+  setTimeout(()=>inp.focus(), 50);
+}
 
 function submitTrade(){
   const ticker=(document.getElementById('fTicker').value||'').trim().toUpperCase();
